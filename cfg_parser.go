@@ -88,6 +88,7 @@ const (
 	connWriterId                    = "conn"
 	connWriterAddrAttr              = "addr"
 	connWriterNetAttr               = "net"
+	serialcodeAttr                  = "serialcode"
 	connWriterReconnectOnMsgAttr    = "reconnectonmsg"
 )
 
@@ -144,7 +145,7 @@ func init() {
 		smtpWriterId:         {createSmtpWriter},
 		connWriterId:         {createconnWriter},
 	}
-
+	fmt.Println("init")
 	err := fillPredefinedFormats()
 	if err != nil {
 		panic(fmt.Sprintf("Seelog couldn't start: predefined formats creation failed. Error: %s", err.Error()))
@@ -846,12 +847,10 @@ func createconnWriter(node *xmlNode, formatFromParent *formatter, formats map[st
 	if node.hasChildren() {
 		return nil, nodeCannotHaveChildrenError
 	}
-
-	err := checkUnexpectedAttribute(node, outputFormatId, connWriterAddrAttr, connWriterNetAttr, connWriterReconnectOnMsgAttr)
+	err := checkUnexpectedAttribute(node, outputFormatId, connWriterAddrAttr, connWriterNetAttr, connWriterReconnectOnMsgAttr, serialcodeAttr)
 	if err != nil {
 		return nil, err
 	}
-
 	currentFormat, err := getCurrentFormat(node, formatFromParent, formats)
 	if err != nil {
 		return nil, err
@@ -866,7 +865,10 @@ func createconnWriter(node *xmlNode, formatFromParent *formatter, formats map[st
 	if !isNet {
 		return nil, newMissingArgumentError(node.name, connWriterNetAttr)
 	}
-
+	serialcode, isSerialcode := node.attributes[serialcodeAttr]
+	if !isSerialcode {
+		return nil, newMissingArgumentError(node.name, connWriterNetAttr)
+	}
 	reconnectOnMsg := false
 	reconnectOnMsgStr, isReconnectOnMsgStr := node.attributes[connWriterReconnectOnMsgAttr]
 	if isReconnectOnMsgStr {
@@ -879,8 +881,7 @@ func createconnWriter(node *xmlNode, formatFromParent *formatter, formats map[st
 		}
 	}
 
-	connWriter := newConnWriter(net, addr, reconnectOnMsg)
-
+	connWriter := newConnWriter(net, addr, serialcode, reconnectOnMsg)
 	return newFormattedWriter(connWriter, currentFormat)
 }
 
