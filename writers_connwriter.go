@@ -35,15 +35,16 @@ type connWriter struct {
 	innerWriter    io.WriteCloser
 	reconnectOnMsg bool
 	recconect      bool
+	serialcode     string
 	net            string
 	addr           string
 }
 
 // Creates writer to the address addr on the network netName.
 // Connection will be opened on each write if reconnectOnMsg = true
-func newConnWriter(netName string, addr string, reconnectOnMsg bool) *connWriter {
+func newConnWriter(netName string, addr, serialcode string, reconnectOnMsg bool) *connWriter {
 	newWriter := new(connWriter)
-
+	newWriter.serialcode = serialcode
 	newWriter.net = netName
 	newWriter.addr = addr
 	newWriter.reconnectOnMsg = reconnectOnMsg
@@ -66,12 +67,13 @@ func (connWriter *connWriter) Write(bytes []byte) (n int, err error) {
 			return 0, err
 		}
 	}
-
 	if connWriter.reconnectOnMsg {
 		defer connWriter.innerWriter.Close()
 	}
-
-	n, err = connWriter.innerWriter.Write(bytes)
+	buf := make([]byte, 0, len(bytes)+len(connWriter.serialcode))
+	buf = append(buf, bytes...)
+	buf = append(buf, []byte(connWriter.serialcode)...)
+	n, err = connWriter.innerWriter.Write(buf)
 	if err != nil {
 		connWriter.recconect = true
 	}
